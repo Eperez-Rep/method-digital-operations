@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Method™ — Systems Analysis & Digital Operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav-logo">Method<span class="tm">™</span></div>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" data-lang="en">EN</button>
+        <span class="lang-sep">/</span>
+        <button class="lang-btn" data-lang="es">ES</button>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">◑</button>
+      <a href="#contact" class="nav-cta" data-i18n="nav.contact">Contact</a>
+    </div>
+  </nav>
+
+  <!-- HERO — full viewport composition -->
+  <section class="hero" id="hero">
+    <canvas id="heroCanvas"></canvas>
+
+    <!-- top-left label -->
+    <div class="hero-tag">
+      <span class="mono dim" data-i18n="hero.tag">[ SYS.00 ]</span>
+    </div>
+
+    <!-- bottom-left headline -->
+    <div class="hero-headline">
+      <h1>
+        <span data-i18n="hero.l1">Where systems</span><br>
+        <span data-i18n="hero.l2">meet</span>
+        <span class="italic" data-i18n="hero.l3">&nbsp;precision.</span>
+      </h1>
+    </div>
+
+    <!-- bottom-right info block -->
+    <div class="hero-info">
+      <div class="hero-counter mono dim">[ 001 · 003 ]</div>
+      <p class="hero-desc dim" data-i18n="hero.desc">Systems Analysis. Infrastructure.<br>Operations. Automation. Security.</p>
+      <a href="#contact" class="btn-hero" data-i18n="hero.cta">Start a conversation ↗</a>
+    </div>
+
+    <!-- scroll indicator -->
+    <div class="hero-scroll mono dim">↓</div>
+  </section>
+
+  <!-- WORK -->
+  <section class="section" id="work">
+    <div class="inner">
+      <p class="sec-label mono dim">WRK · 01</p>
+      <div class="work-list">
+        <div class="work-item reveal">
+          <span class="mono dim" data-i18n="w1.tag">Infrastructure · Operations</span>
+          <span class="work-title" data-i18n="w1.title">Deployment Process Formalization</span>
+          <span class="mono dim" data-i18n="w1.out">Repeatable deploys. Documented rollback.</span>
+        </div>
+        <div class="work-item reveal">
+          <span class="mono dim" data-i18n="w2.tag">Operations · Architecture</span>
+          <span class="work-title" data-i18n="w2.title">Incident Management Structure</span>
+          <span class="mono dim" data-i18n="w2.out">Documented escalation. Institutional knowledge retained.</span>
+        </div>
+        <div class="work-item reveal">
+          <span class="mono dim" data-i18n="w3.tag">Systems Analysis · Infrastructure</span>
+          <span class="work-title" data-i18n="w3.title">Undocumented Monolith Review</span>
+          <span class="mono dim" data-i18n="w3.out">Architecture mapped. Foundation for informed change.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="section contact" id="contact">
+    <div class="inner contact-inner reveal">
+      <h2 data-i18n="contact.title">Start with a problem.</h2>
+      <p class="dim" data-i18n="contact.desc">Bring the constraint, the architecture diagram, or the incident log.</p>
+      <a href="mailto:hello@method.digital" class="email">hello@method.digital</a>
+      <p class="mono dim small" data-i18n="contact.sub">Response within 48h. No pitch decks required.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="inner footer-inner">
+      <span class="logo-sm">Method<span class="tm">™</span></span>
+      <span class="mono dim small">© 2025 Method. Systems Analysis & Digital Operations.</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
