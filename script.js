@@ -62,10 +62,8 @@ window.addEventListener('scroll', () =>
 
   let W, H, nodes, mouse = { x: -1000, y: -1000 };
 
-  // Node config
-  const TOTAL   = 80;     // total nodes
-  const CLUSTER = 55;     // how many form the central organic mass
-  const LINK_D  = 120;    // max distance for edges
+  // Node config — groups
+  const LINK_D  = 180;    // max distance for edges within a group
 
   function resize() {
     W = canvas.width  = canvas.offsetWidth;
@@ -76,44 +74,34 @@ window.addEventListener('scroll', () =>
   function rand(a, b)  { return a + Math.random() * (b - a); }
   function randGauss()  { return (Math.random()+Math.random()+Math.random()-1.5)/1.5; }
 
+  function makeCluster(cx, cy, count, spreadFactor, nodeMinR, nodeMaxR, glowThresh, groupId) {
+    const arr = [];
+    for (let i = 0; i < count; i++) {
+      const angle  = rand(0, Math.PI * 2);
+      const spread = Math.abs(randGauss()) * spreadFactor;
+      const x = cx + Math.cos(angle) * spread;
+      const y = cy + Math.sin(angle) * spread * 0.85;
+      arr.push({
+        x, y, ox: x, oy: y,
+        vx: rand(-0.10, 0.10),
+        vy: rand(-0.10, 0.10),
+        r:  rand(nodeMinR, nodeMaxR),
+        p:  rand(0, Math.PI * 2),
+        ps: rand(0.008, 0.022),
+        glow: Math.random() > glowThresh,
+        cluster: true,
+        group: groupId,
+      });
+    }
+    return arr;
+  }
+
   function initNodes() {
-    const cx = W * 0.52, cy = H * 0.48;  // cluster centre — slightly right of mid
     nodes = [];
 
-    // Clustered organic mass
-    for (let i = 0; i < CLUSTER; i++) {
-      const angle  = rand(0, Math.PI * 2);
-      const spread = Math.abs(randGauss()) * Math.min(W, H) * 0.22;
-      nodes.push({
-        x:  cx + Math.cos(angle) * spread,
-        y:  cy + Math.sin(angle) * spread * 0.85,
-        ox: cx + Math.cos(angle) * spread,
-        oy: cy + Math.sin(angle) * spread * 0.85,
-        vx: rand(-0.12, 0.12),
-        vy: rand(-0.12, 0.12),
-        r:  rand(1.2, 3.8),
-        p:  rand(0, Math.PI * 2),
-        ps: rand(0.008, 0.025),
-        glow: Math.random() > 0.65,   // glowing amber nodes
-        cluster: true,
-      });
-    }
-
-    // Scattered field nodes
-    for (let i = CLUSTER; i < TOTAL; i++) {
-      nodes.push({
-        x:  rand(0, W),
-        y:  rand(0, H),
-        ox: 0, oy: 0,
-        vx: rand(-0.08, 0.08),
-        vy: rand(-0.08, 0.08),
-        r:  rand(0.8, 2),
-        p:  rand(0, Math.PI * 2),
-        ps: rand(0.006, 0.016),
-        glow: false,
-        cluster: false,
-      });
-    }
+    // Main cluster — fills the screen
+    const main = makeCluster(W * 0.52, H * 0.48, 120, Math.min(W, H) * 0.75, 2.5, 6.5, 0.55, 0);
+    nodes.push(...main);
   }
 
   function isDark() {
@@ -135,20 +123,16 @@ window.addEventListener('scroll', () =>
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const ni = nodes[i], nj = nodes[j];
-        if (!ni.cluster && !nj.cluster) continue;   // skip field-to-field
+        if (ni.group !== nj.group) continue;
+        const linkD = ni.group === 0 ? LINK_D : 80;
         const dx = ni.x - nj.x, dy = ni.y - nj.y;
         const d  = Math.sqrt(dx*dx + dy*dy);
-        if (d > LINK_D) continue;
-        const alpha = (1 - d / LINK_D) * (ni.glow || nj.glow ? 0.45 : 0.18);
-        const glowEdge = ni.glow || nj.glow;
-        if (glowEdge && dk) {
-          ctx.strokeStyle = `rgba(200,160,60,${alpha})`;
-        } else {
-          ctx.strokeStyle = dk
-            ? `rgba(160,160,150,${alpha * 0.6})`
-            : `rgba(80,80,70,${alpha * 0.5})`;
-        }
-        ctx.lineWidth = glowEdge ? 0.7 : 0.4;
+        if (d > linkD) continue;
+        const alpha = (1 - d / linkD) * (ni.glow || nj.glow ? 0.45 : 0.18);
+        ctx.strokeStyle = dk
+          ? `rgba(255,255,255,${alpha * 0.55})`
+          : `rgba(80,80,70,${alpha * 0.5})`;
+        ctx.lineWidth = (ni.glow || nj.glow) ? 0.7 : 0.4;
         ctx.beginPath();
         ctx.moveTo(ni.x, ni.y);
         ctx.lineTo(nj.x, nj.y);
@@ -161,32 +145,36 @@ window.addEventListener('scroll', () =>
       n.p  += n.ps;
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
-      if (n.glow && dk) {
-        // amber glow halo
-        const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 9);
-        gr.addColorStop(0,   `rgba(210,168,75,${0.28 * pulse})`);
-        gr.addColorStop(0.4, `rgba(180,120,30,${0.12 * pulse})`);
-        gr.addColorStop(1,   'rgba(0,0,0,0)');
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r * 9, 0, Math.PI * 2);
-        ctx.fillStyle = gr;
-        ctx.fill();
-
-        // bright core
+      if (dk) {
+        // all nodes white in dark mode
+        const isGlow = n.glow;
+        if (isGlow) {
+          const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 9);
+          gr.addColorStop(0,   `rgba(255,255,255,${0.22 * pulse})`);
+          gr.addColorStop(0.4, `rgba(220,220,220,${0.08 * pulse})`);
+          gr.addColorStop(1,   'rgba(0,0,0,0)');
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r * 9, 0, Math.PI * 2);
+          ctx.fillStyle = gr;
+          ctx.fill();
+        }
+        const a = isGlow
+          ? (0.90 + 0.10 * pulse)
+          : n.cluster
+            ? (0.40 + 0.35 * pulse)
+            : (0.18 + 0.10 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(230,190,90,${0.85 + 0.15 * pulse})`;
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
-        // regular node
+        // light mode — dark nodes
         const a = n.cluster
-          ? (dk ? 0.35 + 0.35 * pulse : 0.25 + 0.25 * pulse)
-          : (dk ? 0.15 + 0.1 * pulse  : 0.1 + 0.08 * pulse);
+          ? (0.25 + 0.25 * pulse)
+          : (0.1 + 0.08 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = dk
-          ? `rgba(180,178,165,${a})`
-          : `rgba(60,58,50,${a})`;
+        ctx.fillStyle = `rgba(60,58,50,${a})`;
         ctx.fill();
       }
 
