@@ -3,46 +3,28 @@
 // ── i18n ──────────────────────────────────────────────────────
 const T = {
   en: {
-    "nav.contact":    "Contact",
-    "hero.tag":       "[ SYS.00 ]",
-    "hero.l1":        "Where systems",
-    "hero.l2":        "meet",
-    "hero.l3":        "\u00a0precision.",
-    "hero.desc":      "Systems Analysis. Infrastructure.\nOperations. Automation. Security.",
-    "hero.cta":       "Start a conversation \u2197",
-    "w1.tag":  "Infrastructure · Operations",
-    "w1.title":"Deployment Process Formalization",
-    "w1.out":  "Repeatable deploys. Documented rollback.",
-    "w2.tag":  "Operations · Architecture",
-    "w2.title":"Incident Management Structure",
-    "w2.out":  "Documented escalation. Institutional knowledge retained.",
-    "w3.tag":  "Systems Analysis · Infrastructure",
-    "w3.title":"Undocumented Monolith Review",
-    "w3.out":  "Architecture mapped. Foundation for informed change.",
-    "contact.title": "Start with a problem.",
-    "contact.desc":  "Bring the constraint, the architecture diagram, or the incident log.",
-    "contact.sub":   "Response within 48h. No pitch decks required.",
+    "nav.contact":    "Enquire",
+    "hero.tag":       "[ METHOD · SYS ]",
+    "hero.l1":        "Systems.",
+    "hero.l2":        "Refinement.",
+    "hero.l3":        "Infrastructure.",
+    "hero.desc":      "Systems Analysis · Architecture\nInfrastructure · Operations",
+    "hero.cta":       "Open a conversation \u2197",
+    "contact.title": "Bring the problem.",
+    "contact.desc":  "Method works at the intersection of analysis, architecture, and operational discipline.",
+    "contact.sub":   "Response within 48h.",
   },
   es: {
-    "nav.contact":    "Contacto",
-    "hero.tag":       "[ SYS.00 ]",
-    "hero.l1":        "Donde los sistemas",
-    "hero.l2":        "encuentran",
-    "hero.l3":        "\u00a0precisión.",
-    "hero.desc":      "Análisis de Sistemas. Infraestructura.\nOperaciones. Automatización. Seguridad.",
-    "hero.cta":       "Iniciar una conversación \u2197",
-    "w1.tag":  "Infraestructura · Operaciones",
-    "w1.title":"Formalización del Proceso de Despliegue",
-    "w1.out":  "Despliegues reproducibles. Rollback documentado.",
-    "w2.tag":  "Operaciones · Arquitectura",
-    "w2.title":"Estructura de Gestión de Incidentes",
-    "w2.out":  "Escalación documentada. Conocimiento institucional retenido.",
-    "w3.tag":  "Análisis de Sistemas · Infraestructura",
-    "w3.title":"Revisión de Monolito no Documentado",
-    "w3.out":  "Arquitectura mapeada. Base para el cambio informado.",
-    "contact.title": "Empezá con un problema.",
-    "contact.desc":  "Traé la restricción, el diagrama de arquitectura, o el log de incidentes.",
-    "contact.sub":   "Respuesta en 48h. Sin pitch decks requeridos.",
+    "nav.contact":    "Consultar",
+    "hero.tag":       "[ METHOD · SYS ]",
+    "hero.l1":        "Sistemas.",
+    "hero.l2":        "Refinamiento.",
+    "hero.l3":        "Infraestructura.",
+    "hero.desc":      "Análisis de Sistemas · Arquitectura\nInfraestructura · Operaciones",
+    "hero.cta":       "Iniciar una consulta \u2197",
+    "contact.title": "Traé el problema.",
+    "contact.desc":  "Method opera en la intersección del análisis, la arquitectura y la disciplina operativa.",
+    "contact.sub":   "Respuesta en 48h.",
   }
 };
 
@@ -71,14 +53,6 @@ document.getElementById('themeToggle').addEventListener('click', () => {
 const nav = document.getElementById('nav');
 window.addEventListener('scroll', () =>
   nav.classList.toggle('scrolled', scrollY > 20), { passive: true });
-
-// ── Reveal ─────────────────────────────────────────────────────
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
-  });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
 // ── HERO CANVAS ────────────────────────────────────────────────
 (function () {
