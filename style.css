@@ -169,32 +169,22 @@ a { color: inherit; text-decoration: none; }
   .nav { padding: 0 24px; }
   .nav-cta { display: none; }
 
-  /* Canvas occupies top 60% of screen */
-  .hero { overflow: hidden; }
-  #heroCanvas { height: 60vh; top: 0; bottom: auto; }
-
-  /* Stack both text blocks at bottom, left-aligned */
   .hero-headline {
-    left: 24px; right: 24px;
-    bottom: 80px;
-    max-width: none;
+    left: 24px;
+    bottom: 48px;
+    max-width: 55vw;
   }
   .hero-headline h1 {
-    font-size: clamp(1.4rem, 5vw, 2rem);
-    line-height: 1.1;
+    font-size: clamp(1.1rem, 4vw, 1.5rem);
+    line-height: 1.15;
   }
 
   .hero-info {
-    left: 24px; right: 24px;
-    bottom: 24px;
-    text-align: left;
-    align-items: flex-start;
-    max-width: none;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
+    right: 24px;
+    bottom: 48px;
+    max-width: 38vw;
   }
-  .hero-info .hero-desc { font-size: .70rem; text-align: left; }
+  .hero-info .hero-desc { font-size: .65rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   .reveal { opacity: 1; transform: none; transition: none; }
