@@ -128,11 +128,14 @@ window.addEventListener('scroll', () =>
   syncCanvasBg();
 
   const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const M = isMobileSafari ? 1.8 : 1.0;
-  function mop(v) { return Math.min(v * M, 1); }
+  const LINE_NORMAL   = isMobileSafari ? 0.8  : 0.4;
+  const LINE_GLOW     = isMobileSafari ? 1.1  : 0.65;
+  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.10)';
+  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.38)' : 'rgba(255,255,255,0.22)';
+  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(20,18,14,0.18)'   : 'rgba(40,40,35,0.14)';
+  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(20,18,14,0.38)'   : 'rgba(40,40,35,0.24)';
 
   function draw(ts) {
-    // Use W/H (CSS pixels) for ALL canvas operations — not canvas.width/height (physical px)
     ctx.clearRect(0, 0, W, H);
     const dk = isDark();
 
@@ -140,6 +143,7 @@ window.addEventListener('scroll', () =>
     ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
     ctx.fillRect(0, 0, W, H);
 
+    // subtle vignette — only in dark mode, light mode doesn't need it
     if (dk) {
       const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -148,9 +152,10 @@ window.addEventListener('scroll', () =>
       ctx.fillRect(0, 0, W, H);
     }
 
+    // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
 
-    ctx.lineWidth = 0.4;
+    ctx.lineWidth = LINE_NORMAL;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -164,12 +169,10 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk
-      ? `rgba(255,255,255,${mop(0.10)})`
-      : `rgba(40,40,35,${mop(0.14)})`;
+    ctx.strokeStyle = dk ? EDGE_DIM_DK : EDGE_DIM_LT;
     ctx.stroke();
 
-    ctx.lineWidth = 0.65;
+    ctx.lineWidth = LINE_GLOW;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -183,9 +186,7 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk
-      ? `rgba(255,255,255,${mop(0.22)})`
-      : `rgba(40,40,35,${mop(0.24)})`;
+    ctx.strokeStyle = dk ? EDGE_GLOW_DK : EDGE_GLOW_LT;
     ctx.stroke();
 
     // Draw nodes + physics
@@ -194,15 +195,18 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = n.glow ? mop(0.92 + 0.08 * pulse) : mop(0.55 + 0.30 * pulse);
+        const a = isMobileSafari
+          ? (n.glow ? 0.85 : (0.60 + 0.25 * pulse))
+          : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
+        const a = isMobileSafari ? (0.45 + 0.20 * pulse) : (0.35 + 0.25 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(30,28,24,${mop(0.35 + 0.25 * pulse)})`;
+        ctx.fillStyle = `rgba(30,28,24,${a})`;
         ctx.fill();
       }
 
