@@ -62,8 +62,8 @@ window.addEventListener('scroll', () =>
 
   let W, H, nodes, mouse = { x: -1000, y: -1000 };
 
-  // Node config — groups
-  const LINK_D = 190;   // max distance for edges between core/mid nodes
+  // Node config
+  const LINK_D = 200;
 
   function resize() {
     W = canvas.width  = canvas.offsetWidth;
@@ -71,88 +71,43 @@ window.addEventListener('scroll', () =>
     initNodes();
   }
 
-  function rand(a, b)  { return a + Math.random() * (b - a); }
-  function randGauss()  { return (Math.random()+Math.random()+Math.random()-1.5)/1.5; }
-
-  function makeCluster(cx, cy, count, spreadFactor, nodeMinR, nodeMaxR, glowThresh, groupId) {
-    const arr = [];
-    for (let i = 0; i < count; i++) {
-      const angle  = rand(0, Math.PI * 2);
-      // sqrt of random gives uniform area distribution — no center pile-up
-      const spread = Math.sqrt(Math.random()) * spreadFactor;
-      const x = cx + Math.cos(angle) * spread;
-      const y = cy + Math.sin(angle) * spread * 0.85;
-      arr.push({
-        x, y, ox: x, oy: y,
-        vx: rand(-0.10, 0.10),
-        vy: rand(-0.10, 0.10),
-        r:  rand(nodeMinR, nodeMaxR),
-        p:  rand(0, Math.PI * 2),
-        ps: rand(0.008, 0.022),
-        glow: Math.random() > glowThresh,
-        cluster: true,
-        group: groupId,
-      });
-    }
-    return arr;
-  }
+  function rand(a, b) { return a + Math.random() * (b - a); }
 
   function initNodes() {
     nodes = [];
     const isMobile = W < 768;
+    const count = isMobile ? 120 : 200;
 
-    // ── Core web: dense center zone, but spread to ~60% of screen ──
-    const coreCount = isMobile ? 40 : 65;
-    for (let i = 0; i < coreCount; i++) {
-      const angle  = rand(0, Math.PI * 2);
-      const spread = Math.sqrt(Math.random()) * Math.min(W, H) * 0.28;
-      const x = W * 0.50 + Math.cos(angle) * spread;
-      const y = H * 0.50 + Math.sin(angle) * spread * 0.80;
+    for (let i = 0; i < count; i++) {
+      // Gaussian-ish distribution: concentrate toward center but allow full spread
+      // Use sum of uniforms for bell shape, then scale to canvas
+      const gx = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5; // ~[-1,1] gaussian
+      const gy = (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+
+      // Mix gaussian with uniform so tails reach edges
+      const t = 0.55; // 0=pure gaussian (clumped), 1=pure uniform (flat)
+      const ux = rand(-1, 1);
+      const uy = rand(-1, 1);
+      const nx = gx * (1 - t) + ux * t;
+      const ny = gy * (1 - t) + uy * t;
+
+      const x = W * 0.50 + nx * W * 0.52;
+      const y = H * 0.50 + ny * H * 0.52;
+
+      // Nodes near the edges move slightly faster (more peripheral energy)
+      const edgeness = Math.max(Math.abs(nx), Math.abs(ny)); // 0=center, 1=edge
+      const speed = rand(0.04, 0.10) + edgeness * 0.08;
+      const angle = rand(0, Math.PI * 2);
+
       nodes.push({
         x, y, ox: x, oy: y,
-        vx: rand(-0.10, 0.10), vy: rand(-0.10, 0.10),
-        r:  rand(1.2, 2.8),
-        p:  rand(0, Math.PI * 2), ps: rand(0.008, 0.022),
-        glow: Math.random() > 0.55,
-        cluster: true, outlier: false, group: 0,
-      });
-    }
-
-    // ── Mid ring: scattered across full screen area ──
-    const midCount = isMobile ? 45 : 80;
-    for (let i = 0; i < midCount; i++) {
-      // Uniform over the full canvas, biased slightly away from center
-      const x = rand(W * 0.04, W * 0.96);
-      const y = rand(H * 0.04, H * 0.96);
-      nodes.push({
-        x, y, ox: x, oy: y,
-        vx: rand(-0.25, 0.25), vy: rand(-0.25, 0.25),
-        r:  rand(1.0, 2.8),
-        p:  rand(0, Math.PI * 2), ps: rand(0.007, 0.018),
-        glow: Math.random() > 0.60,
-        cluster: true, outlier: false, group: 0,
-      });
-    }
-
-    // ── Outliers: anchored near screen edges / corners ──
-    const edgeCount = isMobile ? 10 : 18;
-    // Place them explicitly near the 4 edges so they always reach borders
-    for (let i = 0; i < edgeCount; i++) {
-      const side = Math.floor(rand(0, 4)); // 0=top 1=right 2=bottom 3=left
-      let x, y;
-      switch (side) {
-        case 0: x = rand(W * 0.05, W * 0.95); y = rand(H * 0.02, H * 0.18); break;
-        case 1: x = rand(W * 0.78, W * 0.98); y = rand(H * 0.05, H * 0.95); break;
-        case 2: x = rand(W * 0.05, W * 0.95); y = rand(H * 0.80, H * 0.97); break;
-        case 3: x = rand(W * 0.02, W * 0.22); y = rand(H * 0.05, H * 0.95); break;
-      }
-      nodes.push({
-        x, y, ox: x, oy: y,
-        vx: rand(-0.05, 0.05), vy: rand(-0.05, 0.05),
-        r:  rand(1.0, 2.2),
-        p:  rand(0, Math.PI * 2), ps: rand(0.006, 0.014),
-        glow: Math.random() > 0.35,
-        cluster: true, outlier: true, group: 0,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r:  rand(1.0, 2.6) * (1 - edgeness * 0.35), // edge nodes slightly smaller
+        p:  rand(0, Math.PI * 2),
+        ps: rand(0.007, 0.020),
+        glow: Math.random() > (0.45 + edgeness * 0.25), // fewer glows at edges
+        group: 0,
       });
     }
   }
@@ -172,28 +127,14 @@ window.addEventListener('scroll', () =>
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, W, H);
 
-    // Draw edges — batched by glow/normal to minimize ctx state changes
+    // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
-    const coreNodes    = nodes.filter(n => !n.outlier);
-    const outlierNodes = nodes.filter(n =>  n.outlier);
-
-    // Pre-compute: for each outlier, find its 2 closest core nodes (tendril targets)
-    // This runs every frame but node count is small (~22 outliers × ~280 core = cheap)
-    const tendrilMap = new Map(); // outlier index → [coreNode, coreNode]
-    outlierNodes.forEach(o => {
-      const sorted = coreNodes
-        .map(c => ({ c, d2: (o.x-c.x)**2 + (o.y-c.y)**2 }))
-        .sort((a, b) => a.d2 - b.d2)
-        .slice(0, 2)
-        .map(e => e.c);
-      tendrilMap.set(o, sorted);
-    });
 
     ctx.lineWidth = 0.4;
     ctx.beginPath();
-    for (let i = 0; i < coreNodes.length; i++) {
-      for (let j = i + 1; j < coreNodes.length; j++) {
-        const ni = coreNodes[i], nj = coreNodes[j];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const ni = nodes[i], nj = nodes[j];
         if (ni.glow || nj.glow) continue;
         const dx = ni.x - nj.x;
         if (dx * dx > LINK_D2) continue;
@@ -203,15 +144,14 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.07)' : 'rgba(80,80,70,0.07)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.18)' : 'rgba(40,40,35,0.12)';
     ctx.stroke();
 
-    // Glow edges (core only)
-    ctx.lineWidth = 0.7;
+    ctx.lineWidth = 0.65;
     ctx.beginPath();
-    for (let i = 0; i < coreNodes.length; i++) {
-      for (let j = i + 1; j < coreNodes.length; j++) {
-        const ni = coreNodes[i], nj = coreNodes[j];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const ni = nodes[i], nj = nodes[j];
         if (!ni.glow && !nj.glow) continue;
         const dx = ni.x - nj.x;
         if (dx * dx > LINK_D2) continue;
@@ -221,31 +161,16 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.16)' : 'rgba(80,80,70,0.14)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.38)' : 'rgba(40,40,35,0.22)';
     ctx.stroke();
 
-    // Tendril edges — each outlier connects only to its 2 nearest core nodes
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    outlierNodes.forEach(o => {
-      const targets = tendrilMap.get(o);
-      targets.forEach(c => {
-        ctx.moveTo(o.x, o.y);
-        ctx.lineTo(c.x, c.y);
-      });
-    });
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.18)' : 'rgba(80,80,70,0.14)';
-    ctx.stroke();
-
-    // Draw nodes
+    // Draw nodes + physics
     nodes.forEach(n => {
-      n.p  += n.ps;
+      n.p += n.ps;
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = n.glow
-          ? (0.75 + 0.15 * pulse)
-          : (0.28 + 0.22 * pulse);
+        const a = n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
@@ -253,38 +178,34 @@ window.addEventListener('scroll', () =>
       } else {
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(60,58,50,${0.20 + 0.20 * pulse})`;
+        ctx.fillStyle = `rgba(30,28,24,${0.35 + 0.25 * pulse})`;
         ctx.fill();
       }
 
-      // mouse/touch repel — very strong
+      // mouse repel
       const mdx = n.x - mouse.x, mdy = n.y - mouse.y;
       const md  = Math.sqrt(mdx*mdx + mdy*mdy);
-      if (md < 250 && md > 0) {
-        const force = (250 - md) / 250 * 6.0;
+      if (md < 220 && md > 0) {
+        const force = (220 - md) / 220 * 5.0;
         n.vx += (mdx / md) * force;
         n.vy += (mdy / md) * force;
       }
 
-      // drift back — only outliers return to their edge anchor; mid/core roam free
-      if (n.cluster && n.outlier) {
-        n.vx += (n.ox - n.x) * 0.00008;
-        n.vy += (n.oy - n.y) * 0.00008;
-      }
+      // very gentle drift toward canvas center — keeps the overall shape stable
+      n.vx += (W * 0.5 - n.x) * 0.000015;
+      n.vy += (H * 0.5 - n.y) * 0.000015;
 
-      // dampen velocity
-      n.vx *= 0.985;
-      n.vy *= 0.985;
+      n.vx *= 0.982;
+      n.vy *= 0.982;
 
-      // apply velocity
       n.x += n.vx;
       n.y += n.vy;
 
-      // wrap at edges — infinite canvas effect
-      if (n.x < -20)  { n.x += W + 40; n.ox += W + 40; }
-      if (n.x > W+20) { n.x -= W + 40; n.ox -= W + 40; }
-      if (n.y < -20)  { n.y += H + 40; n.oy += H + 40; }
-      if (n.y > H+20) { n.y -= H + 40; n.oy -= H + 40; }
+      // toroidal wrap
+      if (n.x < -30)  n.x += W + 60;
+      if (n.x > W+30) n.x -= W + 60;
+      if (n.y < -30)  n.y += H + 60;
+      if (n.y > H+30) n.y -= H + 60;
     });
 
     requestAnimationFrame(draw);
