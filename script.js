@@ -80,7 +80,7 @@ window.addEventListener('scroll', () =>
   function initNodes() {
     nodes = [];
     const isMobile = W < 768;
-    const count = isMobile ? 60 : 200;
+    const count = isMobile ? 120 : 200;
 
     for (let i = 0; i < count; i++) {
       // Gaussian-ish distribution: concentrate toward center but allow full spread
@@ -95,9 +95,8 @@ window.addEventListener('scroll', () =>
       const nx = gx * (1 - t) + ux * t;
       const ny = gy * (1 - t) + uy * t;
 
-      const navOffset = isMobile ? 56 : 0;
       const x = W * 0.50 + nx * W * 0.52;
-      const y = navOffset + (H - navOffset) * 0.50 + ny * (H - navOffset) * 0.52;
+      const y = H * 0.50 + ny * H * 0.52;
 
       // Nodes near the edges move slightly faster (more peripheral energy)
       const edgeness = Math.max(Math.abs(nx), Math.abs(ny)); // 0=center, 1=edge
@@ -121,15 +120,29 @@ window.addEventListener('scroll', () =>
     return document.documentElement.getAttribute('data-theme') !== 'light';
   }
 
+  function syncCanvasBg() {
+    canvas.style.background = isDark() ? '#0C0C0C' : '#F4F3F0';
+  }
+  const themeObserver = new MutationObserver(syncCanvasBg);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  syncCanvasBg();
+
+  const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const LINE_NORMAL   = isMobileSafari ? 0.8  : 0.4;
+  const LINE_GLOW     = isMobileSafari ? 1.1  : 0.65;
+  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.10)';
+  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.22)';
+  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(20,18,14,0.55)'   : 'rgba(40,40,35,0.14)';
+  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(20,18,14,0.90)'   : 'rgba(40,40,35,0.24)';
+
   function draw(ts) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, W, H);
     const dk = isDark();
 
-    // Canvas background follows theme
+    ctx.globalAlpha = 1;
     ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
     ctx.fillRect(0, 0, W, H);
 
-    // subtle vignette — only in dark mode, light mode doesn't need it
     if (dk) {
       const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -138,10 +151,9 @@ window.addEventListener('scroll', () =>
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
 
-    ctx.lineWidth = 0.4;
+    ctx.lineWidth = LINE_NORMAL;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -155,10 +167,10 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.10)' : 'rgba(40,40,35,0.14)';
+    ctx.strokeStyle = dk ? EDGE_DIM_DK : EDGE_DIM_LT;
     ctx.stroke();
 
-    ctx.lineWidth = 0.65;
+    ctx.lineWidth = LINE_GLOW;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -172,7 +184,7 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.22)' : 'rgba(40,40,35,0.24)';
+    ctx.strokeStyle = dk ? EDGE_GLOW_DK : EDGE_GLOW_LT;
     ctx.stroke();
 
     // Draw nodes + physics
@@ -181,15 +193,16 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse);
+        const a = isMobileSafari ? 1.0 : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
+        const a = isMobileSafari ? 0.85 : (0.35 + 0.25 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(30,28,24,${0.35 + 0.25 * pulse})`;
+        ctx.fillStyle = `rgba(20,18,14,${a})`;
         ctx.fill();
       }
 
