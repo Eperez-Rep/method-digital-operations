@@ -63,7 +63,7 @@ window.addEventListener('scroll', () =>
   let W, H, nodes, mouse = { x: -1000, y: -1000 };
 
   // Node config — groups
-  const LINK_D  = 180;    // max distance for edges within a group
+  const LINK_D = 190;   // max distance for edges between core/mid nodes
 
   function resize() {
     W = canvas.width  = canvas.offsetWidth;
@@ -78,7 +78,8 @@ window.addEventListener('scroll', () =>
     const arr = [];
     for (let i = 0; i < count; i++) {
       const angle  = rand(0, Math.PI * 2);
-      const spread = Math.abs(randGauss()) * spreadFactor;
+      // sqrt of random gives uniform area distribution — no center pile-up
+      const spread = Math.sqrt(Math.random()) * spreadFactor;
       const x = cx + Math.cos(angle) * spread;
       const y = cy + Math.sin(angle) * spread * 0.85;
       arr.push({
@@ -98,12 +99,62 @@ window.addEventListener('scroll', () =>
 
   function initNodes() {
     nodes = [];
-
-    // Main cluster — dense, fills screen
     const isMobile = W < 768;
-    const count = isMobile ? 160 : 280;
-    const main = makeCluster(W * 0.52, H * 0.48, count, Math.min(W, H) * 0.75, 2.5, 6.5, 0.55, 0);
-    nodes.push(...main);
+
+    // ── Core web: dense center zone, but spread to ~60% of screen ──
+    const coreCount = isMobile ? 40 : 65;
+    for (let i = 0; i < coreCount; i++) {
+      const angle  = rand(0, Math.PI * 2);
+      const spread = Math.sqrt(Math.random()) * Math.min(W, H) * 0.28;
+      const x = W * 0.50 + Math.cos(angle) * spread;
+      const y = H * 0.50 + Math.sin(angle) * spread * 0.80;
+      nodes.push({
+        x, y, ox: x, oy: y,
+        vx: rand(-0.10, 0.10), vy: rand(-0.10, 0.10),
+        r:  rand(1.2, 2.8),
+        p:  rand(0, Math.PI * 2), ps: rand(0.008, 0.022),
+        glow: Math.random() > 0.55,
+        cluster: true, outlier: false, group: 0,
+      });
+    }
+
+    // ── Mid ring: scattered across full screen area ──
+    const midCount = isMobile ? 45 : 80;
+    for (let i = 0; i < midCount; i++) {
+      // Uniform over the full canvas, biased slightly away from center
+      const x = rand(W * 0.04, W * 0.96);
+      const y = rand(H * 0.04, H * 0.96);
+      nodes.push({
+        x, y, ox: x, oy: y,
+        vx: rand(-0.25, 0.25), vy: rand(-0.25, 0.25),
+        r:  rand(1.0, 2.8),
+        p:  rand(0, Math.PI * 2), ps: rand(0.007, 0.018),
+        glow: Math.random() > 0.60,
+        cluster: true, outlier: false, group: 0,
+      });
+    }
+
+    // ── Outliers: anchored near screen edges / corners ──
+    const edgeCount = isMobile ? 10 : 18;
+    // Place them explicitly near the 4 edges so they always reach borders
+    for (let i = 0; i < edgeCount; i++) {
+      const side = Math.floor(rand(0, 4)); // 0=top 1=right 2=bottom 3=left
+      let x, y;
+      switch (side) {
+        case 0: x = rand(W * 0.05, W * 0.95); y = rand(H * 0.02, H * 0.18); break;
+        case 1: x = rand(W * 0.78, W * 0.98); y = rand(H * 0.05, H * 0.95); break;
+        case 2: x = rand(W * 0.05, W * 0.95); y = rand(H * 0.80, H * 0.97); break;
+        case 3: x = rand(W * 0.02, W * 0.22); y = rand(H * 0.05, H * 0.95); break;
+      }
+      nodes.push({
+        x, y, ox: x, oy: y,
+        vx: rand(-0.05, 0.05), vy: rand(-0.05, 0.05),
+        r:  rand(1.0, 2.2),
+        p:  rand(0, Math.PI * 2), ps: rand(0.006, 0.014),
+        glow: Math.random() > 0.35,
+        cluster: true, outlier: true, group: 0,
+      });
+    }
   }
 
   function isDark() {
@@ -123,44 +174,67 @@ window.addEventListener('scroll', () =>
 
     // Draw edges — batched by glow/normal to minimize ctx state changes
     const LINK_D2 = LINK_D * LINK_D;
+    const coreNodes    = nodes.filter(n => !n.outlier);
+    const outlierNodes = nodes.filter(n =>  n.outlier);
+
+    // Pre-compute: for each outlier, find its 2 closest core nodes (tendril targets)
+    // This runs every frame but node count is small (~22 outliers × ~280 core = cheap)
+    const tendrilMap = new Map(); // outlier index → [coreNode, coreNode]
+    outlierNodes.forEach(o => {
+      const sorted = coreNodes
+        .map(c => ({ c, d2: (o.x-c.x)**2 + (o.y-c.y)**2 }))
+        .sort((a, b) => a.d2 - b.d2)
+        .slice(0, 2)
+        .map(e => e.c);
+      tendrilMap.set(o, sorted);
+    });
+
     ctx.lineWidth = 0.4;
     ctx.beginPath();
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const ni = nodes[i], nj = nodes[j];
-        if (ni.group !== nj.group) continue;
-        if (ni.glow || nj.glow) continue; // glow edges drawn separately
+    for (let i = 0; i < coreNodes.length; i++) {
+      for (let j = i + 1; j < coreNodes.length; j++) {
+        const ni = coreNodes[i], nj = coreNodes[j];
+        if (ni.glow || nj.glow) continue;
         const dx = ni.x - nj.x;
-        if (dx * dx > LINK_D2) continue;  // fast early reject
+        if (dx * dx > LINK_D2) continue;
         const dy = ni.y - nj.y;
-        const d2 = dx*dx + dy*dy;
-        if (d2 > LINK_D2) continue;
-        const alpha = (1 - Math.sqrt(d2) / LINK_D) * 0.18;
+        if (dx*dx + dy*dy > LINK_D2) continue;
         ctx.moveTo(ni.x, ni.y);
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.12)' : 'rgba(80,80,70,0.10)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.07)' : 'rgba(80,80,70,0.07)';
     ctx.stroke();
 
-    // Glow edges
+    // Glow edges (core only)
     ctx.lineWidth = 0.7;
     ctx.beginPath();
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const ni = nodes[i], nj = nodes[j];
-        if (ni.group !== nj.group) continue;
+    for (let i = 0; i < coreNodes.length; i++) {
+      for (let j = i + 1; j < coreNodes.length; j++) {
+        const ni = coreNodes[i], nj = coreNodes[j];
         if (!ni.glow && !nj.glow) continue;
         const dx = ni.x - nj.x;
         if (dx * dx > LINK_D2) continue;
         const dy = ni.y - nj.y;
-        const d2 = dx*dx + dy*dy;
-        if (d2 > LINK_D2) continue;
+        if (dx*dx + dy*dy > LINK_D2) continue;
         ctx.moveTo(ni.x, ni.y);
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.28)' : 'rgba(80,80,70,0.22)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.16)' : 'rgba(80,80,70,0.14)';
+    ctx.stroke();
+
+    // Tendril edges — each outlier connects only to its 2 nearest core nodes
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    outlierNodes.forEach(o => {
+      const targets = tendrilMap.get(o);
+      targets.forEach(c => {
+        ctx.moveTo(o.x, o.y);
+        ctx.lineTo(c.x, c.y);
+      });
+    });
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.18)' : 'rgba(80,80,70,0.14)';
     ctx.stroke();
 
     // Draw nodes
@@ -169,26 +243,17 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const isGlow = n.glow;
-        if (isGlow) {
-          // soft halo — no gradient creation per frame
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, n.r * 6, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255,255,255,${0.06 * pulse})`;
-          ctx.fill();
-        }
-        const a = isGlow
-          ? (0.90 + 0.10 * pulse)
-          : (0.40 + 0.35 * pulse);
+        const a = n.glow
+          ? (0.75 + 0.15 * pulse)
+          : (0.28 + 0.22 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
-        const a = 0.25 + 0.25 * pulse;
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(60,58,50,${a})`;
+        ctx.fillStyle = `rgba(60,58,50,${0.20 + 0.20 * pulse})`;
         ctx.fill();
       }
 
@@ -201,23 +266,25 @@ window.addEventListener('scroll', () =>
         n.vy += (mdy / md) * force;
       }
 
-      // very slow drift back — let nodes roam far
-      if (n.cluster) {
-        n.vx += (n.ox - n.x) * 0.00004;
-        n.vy += (n.oy - n.y) * 0.00004;
+      // drift back — only outliers return to their edge anchor; mid/core roam free
+      if (n.cluster && n.outlier) {
+        n.vx += (n.ox - n.x) * 0.00008;
+        n.vy += (n.oy - n.y) * 0.00008;
       }
 
       // dampen velocity
-      n.vx *= 0.96;
-      n.vy *= 0.96;
+      n.vx *= 0.985;
+      n.vy *= 0.985;
 
       // apply velocity
       n.x += n.vx;
       n.y += n.vy;
 
-      // bounce at edges
-      if (n.x < 0 || n.x > W) n.vx *= -1;
-      if (n.y < 0 || n.y > H) n.vy *= -1;
+      // wrap at edges — infinite canvas effect
+      if (n.x < -20)  { n.x += W + 40; n.ox += W + 40; }
+      if (n.x > W+20) { n.x -= W + 40; n.ox -= W + 40; }
+      if (n.y < -20)  { n.y += H + 40; n.oy += H + 40; }
+      if (n.y > H+20) { n.y -= H + 40; n.oy -= H + 40; }
     });
 
     requestAnimationFrame(draw);
