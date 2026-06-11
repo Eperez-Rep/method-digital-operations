@@ -120,7 +120,6 @@ window.addEventListener('scroll', () =>
     return document.documentElement.getAttribute('data-theme') !== 'light';
   }
 
-  // iOS Safari: force canvas CSS background so grey never shows through
   function syncCanvasBg() {
     const dk = isDark();
     canvas.style.background = dk ? '#0C0C0C' : '#F4F3F0';
@@ -129,27 +128,23 @@ window.addEventListener('scroll', () =>
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   syncCanvasBg();
 
-  // iOS Safari at 3x DPR washes out sub-pixel lines — use stronger values on mobile
   const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const LINE_NORMAL   = isMobileSafari ? 0.8  : 0.4;
-  const LINE_GLOW     = isMobileSafari ? 1.1  : 0.65;
-  // Dark mode: near-pure white lines
-  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.10)';
-  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.90)' : 'rgba(255,255,255,0.22)';
-  // Light mode: near-pure black lines
-  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(20,18,14,0.55)'   : 'rgba(40,40,35,0.14)';
-  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(20,18,14,0.90)'   : 'rgba(40,40,35,0.24)';
+  const LINE_NORMAL   = isMobileSafari ? 0.7  : 0.4;
+  const LINE_GLOW     = isMobileSafari ? 0.9  : 0.65;
+  // Sweet spot: visible contrast without overwhelming text
+  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)';
+  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)';
+  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(20,18,14,0.22)'   : 'rgba(40,40,35,0.14)';
+  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(20,18,14,0.45)'   : 'rgba(40,40,35,0.24)';
 
   function draw(ts) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dk = isDark();
 
-    // Canvas background follows theme — fully opaque
     ctx.globalAlpha = 1;
     ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
     ctx.fillRect(0, 0, W, H);
 
-    // subtle vignette — only in dark mode
     if (dk) {
       const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -158,7 +153,6 @@ window.addEventListener('scroll', () =>
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
 
     ctx.lineWidth = LINE_NORMAL;
@@ -201,13 +195,15 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = isMobileSafari ? 1.0 : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
+        const a = isMobileSafari
+          ? (n.glow ? 0.95 : (0.65 + 0.20 * pulse))
+          : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
-        const a = isMobileSafari ? 0.85 : (0.35 + 0.25 * pulse);
+        const a = isMobileSafari ? (0.55 + 0.20 * pulse) : (0.35 + 0.25 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(20,18,14,${a})`;
