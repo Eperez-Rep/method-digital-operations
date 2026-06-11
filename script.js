@@ -128,12 +128,14 @@ window.addEventListener('scroll', () =>
     ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
     ctx.fillRect(0, 0, W, H);
 
-    // subtle vignette
-    const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, dk ? 'rgba(0,0,0,0.55)' : 'rgba(244,243,240,0.5)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, W, H);
+    // subtle vignette — only in dark mode, light mode doesn't need it
+    if (dk) {
+      const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
@@ -152,7 +154,7 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.18)' : 'rgba(40,40,35,0.12)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.10)' : 'rgba(40,40,35,0.14)';
     ctx.stroke();
 
     ctx.lineWidth = 0.65;
@@ -169,7 +171,7 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.38)' : 'rgba(40,40,35,0.22)';
+    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.22)' : 'rgba(40,40,35,0.24)';
     ctx.stroke();
 
     // Draw nodes + physics
