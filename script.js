@@ -124,6 +124,10 @@ window.addEventListener('scroll', () =>
     ctx.clearRect(0, 0, W, H);
     const dk = isDark();
 
+    // Canvas background follows theme
+    ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
+    ctx.fillRect(0, 0, W, H);
+
     // subtle vignette
     const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
     vg.addColorStop(0, 'rgba(0,0,0,0)');
