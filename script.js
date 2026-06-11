@@ -80,7 +80,7 @@ window.addEventListener('scroll', () =>
   function initNodes() {
     nodes = [];
     const isMobile = W < 768;
-    const count = isMobile ? 120 : 200;
+    const count = isMobile ? 60 : 200;
 
     for (let i = 0; i < count; i++) {
       // Gaussian-ish distribution: concentrate toward center but allow full spread
@@ -95,8 +95,9 @@ window.addEventListener('scroll', () =>
       const nx = gx * (1 - t) + ux * t;
       const ny = gy * (1 - t) + uy * t;
 
+      const navOffset = isMobile ? 56 : 0;
       const x = W * 0.50 + nx * W * 0.52;
-      const y = H * 0.50 + ny * H * 0.52;
+      const y = navOffset + (H - navOffset) * 0.50 + ny * (H - navOffset) * 0.52;
 
       // Nodes near the edges move slightly faster (more peripheral energy)
       const edgeness = Math.max(Math.abs(nx), Math.abs(ny)); // 0=center, 1=edge
