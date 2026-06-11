@@ -67,14 +67,11 @@ window.addEventListener('scroll', () =>
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    W = canvas.offsetWidth  || window.innerWidth;
-    H = canvas.offsetHeight || window.innerHeight;
+    W = canvas.offsetWidth;
+    H = canvas.offsetHeight;
     canvas.width  = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Paint background immediately so there's no grey flash
-    ctx.fillStyle = isDark() ? '#0C0C0C' : '#F4F3F0';
-    ctx.fillRect(0, 0, W, H);
     initNodes();
   }
 
@@ -123,15 +120,34 @@ window.addEventListener('scroll', () =>
     return document.documentElement.getAttribute('data-theme') !== 'light';
   }
 
+  // iOS Safari: force canvas CSS background so grey never shows through
+  function syncCanvasBg() {
+    const dk = isDark();
+    canvas.style.background = dk ? '#0C0C0C' : '#F4F3F0';
+  }
+  const themeObserver = new MutationObserver(syncCanvasBg);
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  syncCanvasBg();
+
+  // iOS Safari renders sub-pixel lines near-invisible at 3x DPR — bump widths & opacities
+  const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const LINE_NORMAL   = isMobileSafari ? 0.75 : 0.4;
+  const LINE_GLOW     = isMobileSafari ? 1.0  : 0.65;
+  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.10)';
+  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.22)';
+  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(40,40,35,0.28)'   : 'rgba(40,40,35,0.14)';
+  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(40,40,35,0.50)'   : 'rgba(40,40,35,0.24)';
+
   function draw(ts) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dk = isDark();
 
-    // Canvas background follows theme
+    // Canvas background follows theme — fully opaque
+    ctx.globalAlpha = 1;
     ctx.fillStyle = dk ? '#0C0C0C' : '#F4F3F0';
     ctx.fillRect(0, 0, W, H);
 
-    // subtle vignette — only in dark mode, light mode doesn't need it
+    // subtle vignette — only in dark mode
     if (dk) {
       const vg = ctx.createRadialGradient(W/2, H/2, H*0.2, W/2, H/2, H*0.85);
       vg.addColorStop(0, 'rgba(0,0,0,0)');
@@ -143,7 +159,7 @@ window.addEventListener('scroll', () =>
     // Draw all edges in two passes: normal then glow
     const LINK_D2 = LINK_D * LINK_D;
 
-    ctx.lineWidth = 0.4;
+    ctx.lineWidth = LINE_NORMAL;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -157,10 +173,10 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.10)' : 'rgba(40,40,35,0.14)';
+    ctx.strokeStyle = dk ? EDGE_DIM_DK : EDGE_DIM_LT;
     ctx.stroke();
 
-    ctx.lineWidth = 0.65;
+    ctx.lineWidth = LINE_GLOW;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -174,7 +190,7 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? 'rgba(255,255,255,0.22)' : 'rgba(40,40,35,0.24)';
+    ctx.strokeStyle = dk ? EDGE_GLOW_DK : EDGE_GLOW_LT;
     ctx.stroke();
 
     // Draw nodes + physics
@@ -183,15 +199,19 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse);
+        // On mobile Safari boost opacity so nodes don't wash out grey
+        const aBase = isMobileSafari
+          ? (n.glow ? 1.0 : (0.75 + 0.25 * pulse))
+          : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fillStyle = `rgba(255,255,255,${aBase})`;
         ctx.fill();
       } else {
+        const aLt = isMobileSafari ? (0.55 + 0.30 * pulse) : (0.35 + 0.25 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(30,28,24,${0.35 + 0.25 * pulse})`;
+        ctx.fillStyle = `rgba(30,28,24,${aLt})`;
         ctx.fill();
       }
 
