@@ -121,21 +121,18 @@ window.addEventListener('scroll', () =>
   }
 
   function syncCanvasBg() {
-    const dk = isDark();
-    canvas.style.background = dk ? '#0C0C0C' : '#F4F3F0';
+    canvas.style.background = isDark() ? '#0C0C0C' : '#F4F3F0';
   }
   const themeObserver = new MutationObserver(syncCanvasBg);
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   syncCanvasBg();
 
+  // iOS Safari at 3x DPR renders the same rgba values ~40% more faint than desktop.
+  // We apply a minimal multiplier so mobile matches desktop visually — desktop untouched.
   const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const LINE_NORMAL   = isMobileSafari ? 0.7  : 0.4;
-  const LINE_GLOW     = isMobileSafari ? 0.9  : 0.65;
-  // Sweet spot: visible contrast without overwhelming text
-  const EDGE_DIM_DK   = isMobileSafari ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.10)';
-  const EDGE_GLOW_DK  = isMobileSafari ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.22)';
-  const EDGE_DIM_LT   = isMobileSafari ? 'rgba(20,18,14,0.22)'   : 'rgba(40,40,35,0.14)';
-  const EDGE_GLOW_LT  = isMobileSafari ? 'rgba(20,18,14,0.45)'   : 'rgba(40,40,35,0.24)';
+  const M = isMobileSafari ? 1.8 : 1.0; // opacity multiplier, capped at 1 in use
+
+  function mop(v) { return Math.min(v * M, 1); } // multiply opacity, cap at 1
 
   function draw(ts) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -155,7 +152,8 @@ window.addEventListener('scroll', () =>
 
     const LINK_D2 = LINK_D * LINK_D;
 
-    ctx.lineWidth = LINE_NORMAL;
+    // Pass 1: normal edges — desktop values × M on mobile
+    ctx.lineWidth = 0.4;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -169,10 +167,13 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? EDGE_DIM_DK : EDGE_DIM_LT;
+    ctx.strokeStyle = dk
+      ? `rgba(255,255,255,${mop(0.10)})`
+      : `rgba(40,40,35,${mop(0.14)})`;
     ctx.stroke();
 
-    ctx.lineWidth = LINE_GLOW;
+    // Pass 2: glow edges
+    ctx.lineWidth = 0.65;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
@@ -186,7 +187,9 @@ window.addEventListener('scroll', () =>
         ctx.lineTo(nj.x, nj.y);
       }
     }
-    ctx.strokeStyle = dk ? EDGE_GLOW_DK : EDGE_GLOW_LT;
+    ctx.strokeStyle = dk
+      ? `rgba(255,255,255,${mop(0.22)})`
+      : `rgba(40,40,35,${mop(0.24)})`;
     ctx.stroke();
 
     // Draw nodes + physics
@@ -195,18 +198,15 @@ window.addEventListener('scroll', () =>
       const pulse = 0.45 + 0.55 * Math.sin(n.p);
 
       if (dk) {
-        const a = isMobileSafari
-          ? (n.glow ? 0.95 : (0.65 + 0.20 * pulse))
-          : (n.glow ? (0.92 + 0.08 * pulse) : (0.55 + 0.30 * pulse));
+        const a = n.glow ? mop(0.92 + 0.08 * pulse) : mop(0.55 + 0.30 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255,255,255,${a})`;
         ctx.fill();
       } else {
-        const a = isMobileSafari ? (0.55 + 0.20 * pulse) : (0.35 + 0.25 * pulse);
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(20,18,14,${a})`;
+        ctx.fillStyle = `rgba(30,28,24,${mop(0.35 + 0.25 * pulse)})`;
         ctx.fill();
       }
 
