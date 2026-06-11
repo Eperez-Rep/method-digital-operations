@@ -67,11 +67,14 @@ window.addEventListener('scroll', () =>
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    W = canvas.offsetWidth;
-    H = canvas.offsetHeight;
+    W = canvas.offsetWidth  || window.innerWidth;
+    H = canvas.offsetHeight || window.innerHeight;
     canvas.width  = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Paint background immediately so there's no grey flash
+    ctx.fillStyle = isDark() ? '#0C0C0C' : '#F4F3F0';
+    ctx.fillRect(0, 0, W, H);
     initNodes();
   }
 
