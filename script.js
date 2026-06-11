@@ -127,15 +127,13 @@ window.addEventListener('scroll', () =>
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   syncCanvasBg();
 
-  // iOS Safari at 3x DPR renders the same rgba values ~40% more faint than desktop.
-  // We apply a minimal multiplier so mobile matches desktop visually — desktop untouched.
   const isMobileSafari = /iPhone|iPad|iPod/.test(navigator.userAgent);
-  const M = isMobileSafari ? 1.8 : 1.0; // opacity multiplier, capped at 1 in use
-
-  function mop(v) { return Math.min(v * M, 1); } // multiply opacity, cap at 1
+  const M = isMobileSafari ? 1.8 : 1.0;
+  function mop(v) { return Math.min(v * M, 1); }
 
   function draw(ts) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Use W/H (CSS pixels) for ALL canvas operations — not canvas.width/height (physical px)
+    ctx.clearRect(0, 0, W, H);
     const dk = isDark();
 
     ctx.globalAlpha = 1;
@@ -152,7 +150,6 @@ window.addEventListener('scroll', () =>
 
     const LINK_D2 = LINK_D * LINK_D;
 
-    // Pass 1: normal edges — desktop values × M on mobile
     ctx.lineWidth = 0.4;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
@@ -172,7 +169,6 @@ window.addEventListener('scroll', () =>
       : `rgba(40,40,35,${mop(0.14)})`;
     ctx.stroke();
 
-    // Pass 2: glow edges
     ctx.lineWidth = 0.65;
     ctx.beginPath();
     for (let i = 0; i < nodes.length; i++) {
