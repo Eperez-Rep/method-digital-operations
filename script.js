@@ -121,7 +121,7 @@ window.addEventListener('scroll', () =>
   }
 
   function draw(ts) {
-    ctx.clearRect(0, 0, W, H);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const dk = isDark();
 
     // Canvas background follows theme
