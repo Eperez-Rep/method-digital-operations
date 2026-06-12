@@ -59,7 +59,7 @@ window.addEventListener('scroll', () =>
   let W, H, nodes, mouse = { x: -1000, y: -1000 };
 
   // Node config
-  const LINK_D = 200;
+  let LINK_D = 200;
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -76,7 +76,8 @@ window.addEventListener('scroll', () =>
   function initNodes() {
     nodes = [];
     const isMobile = W < 768;
-    const count = isMobile ? 120 : 200;
+    const count = isMobile ? 60 : 200;
+    LINK_D = isMobile ? 110 : 200;
 
     for (let i = 0; i < count; i++) {
       // Gaussian-ish distribution: concentrate toward center but allow full spread
