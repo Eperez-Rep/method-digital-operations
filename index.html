@@ -24,23 +24,77 @@
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero" id="hero">
-    <canvas id="heroCanvas"></canvas>
+  <!-- CANVAS — fixed, full screen -->
+  <canvas id="heroCanvas"></canvas>
 
+  <!-- HORIZONTAL WORLD -->
+  <div class="h-scroll" id="hScroll">
 
-    <div class="hero-headline">
-      <h1>
-        <span class="strong" data-i18n="hero.l1">Systems.</span><br>
-        <span class="italic" data-i18n="hero.l2">Refinement.</span><br>
-        <span class="strong" data-i18n="hero.l3">Infrastructure.</span>
-      </h1>
-    </div>
+    <!-- panel 0: blank clone (seamless snap target) -->
+    <section class="panel panel-blank"></section>
 
-    <div class="hero-info">
-      <p class="hero-desc dim" data-i18n="hero.desc">Systems Analysis · Architecture<br>Infrastructure · Operations</p>
-    </div>
-  </section>
+    <!-- panel 1: HOME -->
+    <section class="panel panel-home" id="hero">
+      <div class="hero-headline">
+        <h1>
+          <span class="strong" data-i18n="hero.l1">Systems.</span><br>
+          <span class="italic" data-i18n="hero.l2">Refinement.</span><br>
+          <span class="strong" data-i18n="hero.l3">Infrastructure.</span>
+        </h1>
+      </div>
+      <div class="hero-info">
+        <p class="hero-desc dim" data-i18n="hero.desc">Systems Analysis · Architecture<br>Infrastructure · Operations</p>
+      </div>
+    </section>
+
+    <!-- panel 2: SERVICES -->
+    <section class="panel panel-services">
+      <div class="services-list">
+        <div class="service-item">
+          <h3>Sistemas</h3>
+          <p>Análisis, diseño e implementación de arquitecturas digitales orientadas a continuidad operativa, control y escalabilidad.</p>
+        </div>
+        <div class="service-item">
+          <h3>Infraestructura</h3>
+          <p>Administración de redes, servicios, plataformas y componentes críticos de operación.</p>
+        </div>
+        <div class="service-item">
+          <h3>Integración</h3>
+          <p>Instalación de sistemas, plataformas y servicios para garantizar interoperabilidad y flujo de información.</p>
+        </div>
+        <div class="service-item">
+          <h3>Automatización</h3>
+          <p>Implementación de procesos automatizados para reducir intervención manual y aumentar consistencia operativa.</p>
+        </div>
+        <div class="service-item">
+          <h3>Refinamiento</h3>
+          <p>Reestructuración de sistemas orientada a claridad, control y consistencia.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- panel 3: MORE -->
+    <section class="panel panel-contact">
+      <div class="contact-card">
+        <a class="btn-hero contact-link" href="https://wa.me/541178240367" target="_blank" rel="noopener" data-i18n="contact.cta">Más información ↗</a>
+      </div>
+    </section>
+
+    <!-- panel 4: HOME clone (seamless loop) -->
+    <section class="panel panel-home">
+      <div class="hero-headline">
+        <h1>
+          <span class="strong" data-i18n="hero.l1">Systems.</span><br>
+          <span class="italic" data-i18n="hero.l2">Refinement.</span><br>
+          <span class="strong" data-i18n="hero.l3">Infrastructure.</span>
+        </h1>
+      </div>
+      <div class="hero-info">
+        <p class="hero-desc dim" data-i18n="hero.desc">Systems Analysis · Architecture<br>Infrastructure · Operations</p>
+      </div>
+    </section>
+
+  </div>
 
   <script src="script.js"></script>
 </body>

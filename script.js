@@ -10,9 +10,7 @@ const T = {
     "hero.l3":        "Infrastructure.",
     "hero.desc":      "Systems Analysis · Architecture\nInfrastructure · Operations",
     "hero.cta":       "Open a conversation \u2197",
-    "contact.title": "Bring the problem.",
-    "contact.desc":  "Method works at the intersection of analysis, architecture, and operational discipline.",
-    "contact.sub":   "Response within 48h.",
+    "contact.cta":   "More information \u2197",
   },
   es: {
     "nav.contact":    "Consultar",
@@ -22,9 +20,7 @@ const T = {
     "hero.l3":        "Infraestructura.",
     "hero.desc":      "Análisis de Sistemas · Arquitectura\nInfraestructura · Operaciones",
     "hero.cta":       "Iniciar una consulta \u2197",
-    "contact.title": "Traé el problema.",
-    "contact.desc":  "Method opera en la intersección del análisis, la arquitectura y la disciplina operativa.",
-    "contact.sub":   "Respuesta en 48h.",
+    "contact.cta":   "Más información ↗",
   }
 };
 
@@ -67,8 +63,8 @@ window.addEventListener('scroll', () =>
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
-    W = canvas.offsetWidth;
-    H = canvas.offsetHeight;
+    W = window.innerWidth;
+    H = window.innerHeight;
     canvas.width  = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -80,7 +76,7 @@ window.addEventListener('scroll', () =>
   function initNodes() {
     nodes = [];
     const isMobile = W < 768;
-    const count = isMobile ? 60 : 200;
+    const count = isMobile ? 120 : 200;
 
     for (let i = 0; i < count; i++) {
       // Gaussian-ish distribution: concentrate toward center but allow full spread
@@ -95,9 +91,8 @@ window.addEventListener('scroll', () =>
       const nx = gx * (1 - t) + ux * t;
       const ny = gy * (1 - t) + uy * t;
 
-      const navOffset = isMobile ? 56 : 0;
       const x = W * 0.50 + nx * W * 0.52;
-      const y = navOffset + (H - navOffset) * 0.50 + ny * (H - navOffset) * 0.52;
+      const y = H * 0.50 + ny * H * 0.52;
 
       // Nodes near the edges move slightly faster (more peripheral energy)
       const edgeness = Math.max(Math.abs(nx), Math.abs(ny)); // 0=center, 1=edge
@@ -207,11 +202,16 @@ window.addEventListener('scroll', () =>
         ctx.fill();
       }
 
-      // mouse repel
+      // mouse repel — capped so the cluster never collapses into a single dot
       const mdx = n.x - mouse.x, mdy = n.y - mouse.y;
       const md  = Math.sqrt(mdx*mdx + mdy*mdy);
-      if (md < 220 && md > 0) {
+      if (md < 220 && md > 30) {
         const force = (220 - md) / 220 * 5.0;
+        n.vx += (mdx / md) * force;
+        n.vy += (mdy / md) * force;
+      } else if (md <= 30 && md > 0) {
+        // gentle outward push to maintain a minimum visible spread
+        const force = 2.0;
         n.vx += (mdx / md) * force;
         n.vy += (mdy / md) * force;
       }
@@ -255,4 +255,43 @@ window.addEventListener('scroll', () =>
   window.addEventListener('resize', resize, { passive: true });
   resize();
   requestAnimationFrame(draw);
+})();
+
+// ── HORIZONTAL AUTO-SLIDE ────────────────────────────────────
+(function () {
+  const scroll = document.getElementById('hScroll');
+  if (!scroll) return;
+
+  // 0=blank | 1=home | 2=services | 3=blank | 4=home_clone
+  // always right: 1→2→3→4, snap to 1, repeat
+  const HOLD     = 6000;
+  const DURATION = 1400;
+  let current  = 1;
+  let animating = false;
+
+  function goTo(i, instant) {
+    if (instant) {
+      scroll.style.transition = 'none';
+      scroll.style.transform  = `translateX(-${i * 100}vw)`;
+      void scroll.offsetWidth;
+      return;
+    }
+    if (animating) return;
+    animating = true;
+    scroll.style.transition = `transform ${DURATION}ms cubic-bezier(.77,0,.18,1)`;
+    scroll.style.transform  = `translateX(-${i * 100}vw)`;
+    setTimeout(() => { animating = false; }, DURATION);
+  }
+
+  function next() {
+    current++;
+    if (current > 4) {
+      goTo(1, true);
+      current = 1;
+      return;
+    }
+    goTo(current, false);
+  }
+
+  setInterval(next, HOLD);
 })();
